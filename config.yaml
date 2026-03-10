@@ -1,0 +1,74 @@
+#============================================================
+# 🔗 GitHub 托管版 - 极简加旗模板
+# 适用：公开仓库 + CF-Workers-SUB 订阅转换
+#============================================================
+
+mixed-port: 7890
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+unified-delay: true
+
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - https://dns.cloudflare.com/dns-query
+
+# 🚩 核心：城市级加旗逻辑 (包含 Phoenix, Los Angeles, Chuncheon)
+proxy-name-replace:
+  - [ "(?i)香港|HK|HongKong|Hkg|中港|深港", "🇭🇰 $0" ]
+  - [ "(?i)日本|JP|Japan|Tokyo|Osaka|Nagoya|Saitama|HND|NRT|KIX|东京|大阪|名古屋|埼玉|关西", "🇯🇵 $0" ]
+  - [ "(?i)美国|US|USA|States|America|LosAngeles|Los Angeles|Phoenix|SanFrancisco|Seattle|NewYork|SanJose|Chicago|SiliconValley|Portland|Fremont|洛杉矶|凤凰城|圣弗朗西斯科|旧金山|西雅图|纽约|圣何塞|芝加哥|硅谷|波特兰|费利蒙|LAX|SFO|SEA|JFK|SJC|PHX|ORD", "🇺🇸 $0" ]
+  - [ "(?i)韩国|KR|Korea|Seoul|Incheon|Busan|Chuncheon|ICN|SEL|PUS|首尔|仁川|釜山|春川", "🇰🇷 $0" ]
+  - [ "(?i)新加坡|SG|Singapore|SIN|LionCity|狮城", "🇸🇬 $0" ]
+  - [ "(?i)台湾|TW|Taiwan|Taipei|TPE|TXG|KHH|台北|台中|台南|高雄", "🇹🇼 $0" ]
+  - [ "(?i)英国|UK|GB|Britain|London|Manchester|LHR|LON|MAN|伦敦|曼彻斯特", "🇬🇧 $0" ]
+  - [ "(?i)德国|DE|Germany|Frankfurt|Munich|Berlin|FRA|MUC|BER|法兰克福|慕尼黑|柏林", "🇩🇪 $0" ]
+  - [ "(?i)法国|FR|France|Paris|CDG|PAR|巴黎", "🇫🇷 $0" ]
+  - [ "(?i)加拿大|CA|Canada|Toronto|Vancouver|Montreal|YYZ|YVR|YUL|多伦多|温哥华|蒙特利尔", "🇨🇦 $0" ]
+
+# 策略组
+proxy-groups:
+  - name: 🚀 节点选择
+    type: select
+    # ⚠️ 重要：当作为 CF-Workers-SUB 模板时，脚本会自动注入 proxies
+    # 如果你手动选点，确保这里有节点
+    proxies:
+      - DIRECT
+
+  - name: 🚫 广告拦截
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+
+# 远程规则集 (引用 meta-rules-dat)
+rule-providers:
+  ads:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.yaml"
+    path: ./ruleset/ads.yaml
+    interval: 86400
+
+  cn_domain:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-cn.yaml"
+    path: ./ruleset/cn_domain.yaml
+    interval: 86400
+
+# 极简规则
+rules:
+  - RULE-SET,ads,🚫 广告拦截
+  - RULE-SET,cn_domain,DIRECT
+  - GEOIP,lan,DIRECT
+  - GEOIP,cn,DIRECT
+  - MATCH,🚀 节点选择
